@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordly Capture</title>
+<style>
+  :root {
+    --w-blue-1:    #017CFF;
+    --w-blue-2:    #1BC3E4;
+    --w-green-2:   #48EA76;
+    --w-gradient:  linear-gradient(to right, #017CFF, #1BC3E4, #48EA76);
+    --bg:       #111318;
+    --bg2:      #191d24;
+    --bg3:      #1f242d;
+    --bg4:      #252b35;
+    --border:   #2a3040;
+    --border2:  #333d50;
+    --text:     #e8eaf0;
+    --text-dim: #5a6478;
+    --text-mid: #8a95aa;
+    --accent:     #017CFF;
+    --accent-dim: #0055cc;
+    --accent-bg:  rgba(1,124,255,0.12);
+    --accent3:    #48EA76;
+    --danger:     #ff4455;
+    --danger-dim: #8b1a22;
+    --warn:       #FFB631;
+    --muted-col:  #CD5500;
+    --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width: 360px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Header */
+  .hdr { background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; }
+  .hdr-gradient { height: 3px; background: var(--w-gradient); }
+  .hdr-inner { padding: 9px 14px; display: flex; align-items: center; gap: 8px; }
+  .logo-w {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; background: var(--w-blue-1);
+    border-radius: 5px; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .logo { font-size: 13px; font-weight: 700; color: #fff; }
+  .hdr-status { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .hdr-live-text { font-size: 10px; font-weight: 600; color: var(--text-dim); display: none; }
+  .hdr-live-text.show { display: block; }
+  .hdr-live-text.connected  { color: var(--accent3); }
+  .hdr-live-text.muted      { color: var(--muted-col); }
+  .hdr-live-text.connecting { color: var(--warn); }
+  .hdr-live-text.error      { color: var(--danger); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-dim); transition: background .3s; flex-shrink: 0;
+  }
+  .status-dot.connecting  { background: var(--warn); animation: pulse 1s infinite; }
+  .status-dot.connected   { background: var(--accent3); box-shadow: 0 0 5px var(--accent3); }
+  .status-dot.muted       { background: var(--muted-col); }
+  .status-dot.error       { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* Body */
+  .body { padding: 12px 14px; }
+
+  /* Error bar */
+  .status-bar { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 11px; color: var(--text-dim); display: none; }
+  .status-bar.show { display: block; }
+  .status-bar.error { border-color: var(--danger-dim); color: var(--danger); }
+
+  /* Form */
+  .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+
+  label {
+    display: block; font-size: 10px; font-weight: 600;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px;
+  }
+
+  input, select {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); padding: 7px 10px; border-radius: 6px;
+    font-family: var(--font); font-size: 12px; outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(1,124,255,.12); }
+  select option { background: var(--bg2); }
+
+  /* Attend bar */
+  .attend-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;
+    cursor: pointer; transition: border-color .15s, background .15s;
+    text-decoration: none;
+  }
+  .attend-bar:hover { border-color: var(--accent); background: var(--accent-bg); }
+  .attend-icon { font-size: 14px; flex-shrink: 0; }
+  .attend-content { flex: 1; min-width: 0; }
+  .attend-label { font-size: 11px; font-weight: 600; color: var(--accent); }
+  .attend-url { font-family: var(--mono); font-size: 9px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .attend-arrow { color: var(--text-dim); font-size: 12px; flex-shrink: 0; }
+
+  /* Three-col control row */
+  .ctrl-row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    gap: 6px; align-items: end; margin-bottom: 8px;
+  }
+
+  /* ALS inline toggle */
+  .als-inline { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .als-inline-label { font-size: 9px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .toggle { position: relative; width: 34px; height: 20px; flex-shrink: 0; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--border2); border-radius: 10px; cursor: pointer; transition: background .2s; }
+  .toggle-slider::before { content:''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: var(--text-dim); border-radius: 50%; transition: transform .2s, background .2s; }
+  .toggle input:checked + .toggle-slider { background: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(14px); background: #fff; }
+
+  /* Volume row */
+  .vol-row { margin-bottom: 8px; }
+  .vol-row label { margin-bottom: 3px; }
+  .vol-slider-wrap { display: flex; align-items: center; gap: 8px; }
+  .vol-icon { font-size: 13px; color: var(--text-dim); flex-shrink: 0; width: 16px; text-align: center; }
+  input[type="range"] {
+    flex: 1; height: 4px; background: var(--border2);
+    border-radius: 2px; outline: none; border: none;
+    padding: 0; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: none;
+  }
+  .vol-pct { font-family: var(--mono); font-size: 10px; color: var(--text-mid); width: 32px; text-align: right; flex-shrink: 0; }
+
+  /* Buttons */
+  button {
+    font-family: var(--font); font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; border-radius: 6px;
+    padding: 8px 14px; width: 100%;
+    transition: background .12s, opacity .12s; letter-spacing: .01em;
+  }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button:not(:disabled):active { transform:scale(.97); }
+
+  .btn-start { background: var(--w-blue-1); color: #fff; box-shadow: 0 2px 8px rgba(1,124,255,.25); }
+  .btn-start:not(:disabled):hover { background: #0066dd; }
+
+  /* Mute capture button — compact, inline */
+  .btn-mute-capture {
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text-mid); padding: 6px 10px; width: auto; font-size: 11px;
+    white-space: nowrap; border-radius: 6px;
+  }
+  .btn-mute-capture:not(:disabled):hover { border-color: var(--muted-col); color: var(--muted-col); }
+  .btn-mute-capture.on { background: var(--muted-col); color: #fff; border-color: var(--muted-col); }
+
+  /* Bottom row */
+  .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .btn-leave { background: var(--bg3); border: 1px solid var(--border2); color: var(--text-mid); }
+  .btn-leave:not(:disabled):hover { border-color: var(--text-mid); color: var(--text); }
+  .btn-end { background: transparent; border: 1px solid var(--danger-dim); color: var(--danger); }
+  .btn-end:not(:disabled):hover { background: var(--danger-dim); color: #fff; }
+
+  /* Session info */
+  .session-info { display: none; font-size: 10px; color: var(--text-dim); margin-bottom: 8px; padding: 6px 10px; background: var(--bg3); border-radius: 6px; border: 1px solid var(--border); line-height: 1.6; }
+  .session-info.show { display: block; }
+  .session-info b { color: var(--text-mid); font-weight: 600; }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 10px 0; }
+
+  /* Lang presets */
+  .lang-section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .lang-section-label { font-size: 10px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: .08em; }
+  .lang-current { font-size: 10px; font-weight: 600; color: var(--accent); }
+  .lang-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .btn-lang { background: var(--bg3); border: 1px solid var(--border); color: var(--text-mid); font-size: 11px; font-weight: 500; padding: 7px 4px; border-radius: 6px; text-align: center; }
+  .btn-lang:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+  .btn-lang.on { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+
+  /* Config/live sections */
+  .config-section.hidden { display: none; }
+  .live-section { display: none; }
+  .live-section.show { display: block; }
+
+  /* ALS config row */
+  .als-config-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px; padding: 8px 10px;
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+  }
+  .als-config-label { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
+  .als-config-label span { font-size: 10px; color: var(--text-dim); font-weight: 400; display: block; margin-top: 1px; }
+
+  /* Confirm overlay */
+  .confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .confirm-overlay.show { display: flex; }
+  .confirm-box { background: var(--bg2); border: 1px solid var(--danger); border-radius: 8px; padding: 20px; width: 100%; text-align: center; }
+  .confirm-title { font-size: 13px; font-weight: 700; color: var(--danger); margin-bottom: 8px; }
+  .confirm-msg { font-size: 11px; color: var(--text-mid); line-height: 1.6; margin-bottom: 16px; }
+  .confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn-cancel { background: var(--bg3); border: 1px solid var(--border2); color: var(--text-mid); border-radius: 6px; }
+  .btn-cancel:hover { border-color: var(--text-mid); }
+  .btn-confirm-end { background: var(--danger); color: #fff; border-radius: 6px; }
+  .btn-confirm-end:hover { background: #cc2233; }
+
+  /* Footer */
+  .footer { border-top: 1px solid var(--border); padding: 6px 14px; font-size: 10px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; }
+  .footer-brand { font-weight: 700; color: var(--w-blue-1); }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-gradient"></div>
+  <div class="hdr-inner">
+    <span class="logo-w">W</span>
+    <div class="logo">Wordly Capture</div>
+    <div class="hdr-status">
+      <span class="hdr-live-text" id="hdr-live-text"></span>
+      <div class="status-dot idle" id="status-dot"></div>
+    </div>
+  </div>
+</div>
+
+<div class="body">
+
+  <div class="status-bar" id="status-bar"></div>
+
+  <!-- ── Config section ── -->
+  <div class="config-section" id="config-section">
+    <div class="form-2col">
+      <div>
+        <label>Session ID</label>
+        <input type="text" id="session-id" placeholder="ABCD-1234" maxlength="9">
+      </div>
+      <div>
+        <label>Passcode</label>
+        <input type="text" id="passcode" placeholder="123456">
+      </div>
+    </div>
+    <div class="form-2col">
+      <div>
+        <label>Speaker Language</label>
+        <select id="language"><option value="">Loading...</option></select>
+      </div>
+      <div>
+        <label>Speaker Name</label>
+        <input type="text" id="speaker-name" placeholder="Tab Capture">
+      </div>
+    </div>
+    <div class="als-config-row">
+      <div class="als-config-label">
+        Auto Language Selection
+        <span>Wordly detects language switches automatically</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="als-toggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <button class="btn-start" id="btn-start">▶ &nbsp;Start Capture</button>
+  </div>
+
+  <!-- ── Live section ── -->
+  <div class="live-section" id="live-section">
+
+    <!-- Row 1: Session info -->
+    <div class="session-info" id="session-info"></div>
+
+    <!-- Row 2: Attend bar -->
+    <div class="attend-bar" id="attend-bar">
+      <span class="attend-icon">🎧</span>
+      <div class="attend-content">
+        <div class="attend-label">Click to attend</div>
+        <div class="attend-url" id="attend-url"></div>
+      </div>
+      <span class="attend-arrow">↗</span>
+    </div>
+
+    <!-- Row 3: Spoken Language | ALS | Mute Capture -->
+    <div class="ctrl-row">
+      <div>
+        <label>Spoken Language</label>
+        <select id="spoken-lang-select"><option value="">Loading...</option></select>
+      </div>
+      <div class="als-inline">
+        <span class="als-inline-label">ALS</span>
+        <label class="toggle" style="margin-bottom:0;">
+          <input type="checkbox" id="als-toggle-live" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+        <span class="als-inline-label">Capture</span>
+        <button class="btn-mute-capture" id="btn-mute">🔇</button>
+      </div>
+    </div>
+
+    <!-- Row 4: Source volume slider -->
+    <div class="vol-row">
+      <label>Source Volume &nbsp;<span style="font-size:9px;color:var(--text-dim);text-transform:none;letter-spacing:0;font-weight:400;">— does not affect Wordly stream</span></label>
+      <div class="vol-slider-wrap">
+        <span class="vol-icon" id="vol-icon">🔊</span>
+        <input type="range" id="vol-slider" min="0" max="100" value="100" step="1">
+        <span class="vol-pct" id="vol-pct">100%</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Row 5: Quick switch presets -->
+    <div class="lang-section-hd">
+      <span class="lang-section-label">Quick Switch</span>
+      <span class="lang-current" id="lang-current"></span>
+    </div>
+    <div class="lang-grid" id="lang-grid"></div>
+
+    <!-- Row 6: Leave | End Session -->
+    <div class="bottom-row">
+      <button class="btn-leave" id="btn-stop">■ &nbsp;Leave</button>
+      <button class="btn-end" id="btn-end">⏹ &nbsp;End Session</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <span class="footer-brand">wordly</span>
+  <span>Capture v0.2.1</span>
+</div>
+
+<!-- Confirm end -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">End Session?</div>
+    <div class="confirm-msg">Ends the Wordly session for all attendees everywhere. Cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" id="btn-cancel">Cancel</button>
+      <button class="btn-confirm-end" id="btn-confirm-end">End Now</button>
+    </div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

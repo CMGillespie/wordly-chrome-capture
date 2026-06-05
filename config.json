@@ -1,0 +1,4 @@
+{
+  "_readme": "Edit 'presets' to set the quick-switch language buttons shown during a live session. Use Wordly language codes. Maximum 6. Look up codes at https://help.wordly.ai/about-languages-supported",
+  "presets": ["en", "es-MX", "fr", "fr-CA", "de", "ja"]
+}
