@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordly Capture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --w-blue-500:   #017CFF;
+    --w-blue-600:   #0062CC;
+    --w-blue-50:    #EBF5FF;
+    --w-blue-100:   #D6EAFF;
+    --w-gradient:   linear-gradient(to right, #017CFF, #1BC3E4, #48EA76);
+    --w-green-500:  #16A34A;
+    --w-green-50:   #F0FDF4;
+    --w-red-500:    #DC2626;
+    --w-red-50:     #FEF2F2;
+    --w-orange-500: #EA580C;
+    --surface-base:    #FFFFFF;
+    --surface-raised:  #F8FAFC;
+    --surface-inset:   #F8FAFC;
+    --border-default:  #E2E8F0;
+    --border-strong:   #CBD5E1;
+    --border-focus:    #017CFF;
+    --text-primary:    #0F172A;
+    --text-secondary:  #475569;
+    --text-tertiary:   #94A3B8;
+    --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width: 360px;
+    background: var(--surface-base);
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Header ── */
+  .hdr { display: flex; flex-direction: column; }
+  .hdr-gradient { height: 4px; background: var(--w-gradient); }
+  .hdr-inner {
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface-base);
+    border-bottom: 1px solid var(--border-default);
+  }
+  .logo-w {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; background: var(--w-blue-500);
+    border-radius: 6px; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .logo { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+  .hdr-status { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .hdr-live-text { font-size: 11px; font-weight: 600; color: var(--text-tertiary); display: none; }
+  .hdr-live-text.show { display: block; }
+  .hdr-live-text.connected  { color: var(--w-green-500); }
+  .hdr-live-text.muted      { color: var(--w-orange-500); }
+  .hdr-live-text.connecting { color: var(--w-blue-500); }
+  .hdr-live-text.error      { color: var(--w-red-500); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border-strong); transition: background .3s; flex-shrink: 0;
+  }
+  .status-dot.connecting  { background: var(--w-blue-500); animation: pulse 1s infinite; }
+  .status-dot.connected   { background: var(--w-green-500); }
+  .status-dot.muted       { background: var(--w-orange-500); }
+  .status-dot.error       { background: var(--w-red-500); }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+  /* ── Body ── */
+  .body { padding: 14px 16px; }
+
+  /* Error bar */
+  .status-bar {
+    background: var(--w-red-50); border: 1px solid #FECACA;
+    border-radius: var(--radius-sm); padding: 8px 12px;
+    margin-bottom: 12px; font-size: 12px; font-weight: 500;
+    color: var(--w-red-500); display: none;
+  }
+  .status-bar.show { display: block; }
+
+  /* Form */
+  .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .form-row  { margin-bottom: 12px; }
+  label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 4px; letter-spacing: .01em;
+  }
+  input, select {
+    width: 100%;
+    background: var(--surface-base); border: 1.5px solid var(--border-default);
+    color: var(--text-primary); padding: 8px 10px;
+    border-radius: var(--radius-sm); font-family: var(--font);
+    font-size: 12px; font-weight: 500; outline: none;
+    transition: border-color .15s, box-shadow .15s; -webkit-appearance: none;
+  }
+  input:focus, select:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(1,124,255,.12);
+  }
+  input::placeholder { color: var(--text-tertiary); }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394A3B8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+  }
+
+  /* ALS row in config */
+  .als-config-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    padding: 10px 12px; background: var(--surface-inset);
+    border: 1.5px solid var(--border-default); border-radius: var(--radius-sm);
+  }
+  .als-config-label { font-size: 12px; font-weight: 600; color: var(--text-primary); flex: 1; }
+  .als-config-label span { font-size: 11px; color: var(--text-tertiary); font-weight: 400; display: block; margin-top: 1px; }
+
+  /* Toggle */
+  .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider {
+    position: absolute; inset: 0; background: var(--border-strong);
+    border-radius: 10px; cursor: pointer; transition: background .2s;
+  }
+  .toggle-slider::before {
+    content:''; position: absolute; width: 14px; height: 14px;
+    left: 3px; top: 3px; background: #fff; border-radius: 50%;
+    transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--w-blue-500); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+  /* Buttons */
+  button {
+    font-family: var(--font); font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; border-radius: var(--radius-sm);
+    padding: 9px 14px; width: 100%;
+    transition: background .12s, opacity .12s, box-shadow .12s;
+  }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  button:not(:disabled):active { transform:scale(.98); }
+
+  .btn-start {
+    background: var(--w-blue-500); color: #fff;
+    box-shadow: 0 1px 3px rgba(1,124,255,.3);
+  }
+  .btn-start:not(:disabled):hover { background: var(--w-blue-600); }
+
+  /* Attend + Split row */
+  .attend-split-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+
+  .attend-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--w-blue-50); border: 1.5px solid var(--w-blue-100);
+    border-radius: var(--radius-sm); padding: 9px 10px;
+    cursor: pointer; transition: border-color .15s, background .15s;
+    text-decoration: none;
+  }
+  .attend-bar:hover { border-color: var(--w-blue-500); background: #dbeafe; }
+  .attend-icon { font-size: 14px; flex-shrink: 0; }
+  .attend-content { flex: 1; min-width: 0; }
+  .attend-label { font-size: 11px; font-weight: 700; color: var(--w-blue-500); }
+  .attend-url { font-size: 9px; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+
+  .btn-split {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--surface-inset); border: 1.5px solid var(--border-default);
+    color: var(--text-secondary); font-size: 11px; font-weight: 600;
+    padding: 9px 8px; border-radius: var(--radius-sm); cursor: pointer; width: 100%;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-split:hover { border-color: var(--w-blue-500); color: var(--w-blue-500); }
+
+  /* Three-col control row: lang | ALS | Mute */
+  .ctrl-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: end; margin-bottom: 10px; }
+  .als-inline { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .ctrl-label { font-size: 9px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+
+  /* Mute button */
+  .btn-mute-capture {
+    background: var(--surface-inset); border: 1.5px solid var(--border-default);
+    color: var(--text-secondary); padding: 6px 10px; width: auto; font-size: 11px;
+    font-weight: 600; white-space: nowrap; border-radius: var(--radius-sm);
+  }
+  .btn-mute-capture:not(:disabled):hover { border-color: var(--w-orange-500); color: var(--w-orange-500); }
+  .btn-mute-capture.on { background: #FFF7ED; border-color: var(--w-orange-500); color: var(--w-orange-500); }
+
+  /* Lang presets */
+  .lang-section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .lang-section-label { font-size: 10px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .06em; }
+  .lang-current { font-size: 11px; font-weight: 600; color: var(--w-blue-500); }
+  .lang-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 12px; }
+  .btn-lang {
+    background: var(--surface-inset); border: 1.5px solid var(--border-default);
+    color: var(--text-secondary); font-size: 13px; font-weight: 600;
+    padding: 7px 4px; border-radius: var(--radius-sm); text-align: center;
+  }
+  .btn-lang:not(:disabled):hover { border-color: var(--w-blue-500); color: var(--w-blue-500); background: var(--w-blue-50); }
+  .btn-lang.on { background: var(--w-blue-50); border-color: var(--w-blue-500); color: var(--w-blue-500); }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border-default); margin: 12px 0; }
+
+  /* Local browser volume */
+  .vol-row { margin-bottom: 10px; }
+  .vol-slider-wrap { display: flex; align-items: center; gap: 8px; }
+  input[type="range"] {
+    flex: 1; height: 4px; background: var(--border-default);
+    border-radius: 2px; outline: none; border: none; padding: 0; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--w-blue-500); cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .vol-pct { font-size: 10px; font-weight: 600; color: var(--text-tertiary); width: 32px; text-align: right; flex-shrink: 0; }
+
+  /* Bottom row */
+  .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .btn-leave {
+    background: var(--surface-inset); border: 1.5px solid var(--border-default); color: var(--text-secondary);
+  }
+  .btn-leave:not(:disabled):hover { border-color: var(--border-strong); color: var(--text-primary); }
+  .btn-end { background: var(--w-red-50); border: 1.5px solid #FECACA; color: var(--w-red-500); }
+  .btn-end:not(:disabled):hover { background: #FEE2E2; border-color: #FCA5A5; }
+
+  /* Session info */
+  .session-info {
+    display: none; font-size: 11px; color: var(--text-secondary);
+    margin-bottom: 10px; padding: 8px 12px;
+    background: var(--surface-inset); border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default); line-height: 1.6;
+  }
+  .session-info.show { display: block; }
+  .session-info b { color: var(--text-primary); font-weight: 600; }
+
+  /* Sections */
+  .config-section.hidden { display: none; }
+  .live-section { display: none; }
+  .live-section.show { display: block; }
+
+  /* Split confirm overlay */
+  .confirm-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,.6); z-index: 100;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .confirm-overlay.show { display: flex; }
+  .confirm-box {
+    background: var(--surface-base); border: 1px solid var(--border-default);
+    border-radius: var(--radius-md); padding: 20px; width: 100%; text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,.1);
+  }
+  .confirm-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+  .confirm-msg { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+  .confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn-cancel { background: var(--surface-inset); border: 1.5px solid var(--border-default); color: var(--text-secondary); border-radius: var(--radius-sm); }
+  .btn-cancel:hover { border-color: var(--border-strong); }
+  .btn-confirm-end { background: var(--w-red-500); color: #fff; border-radius: var(--radius-sm); }
+  .btn-confirm-end:hover { background: #B91C1C; }
+  .btn-confirm-split { background: var(--w-blue-500); color: #fff; border-radius: var(--radius-sm); }
+  .btn-confirm-split:hover { background: var(--w-blue-600); }
+
+  /* End session confirm — separate overlay */
+  .end-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,.6); z-index: 100;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .end-overlay.show { display: flex; }
+
+  /* Footer */
+  .footer {
+    border-top: 1px solid var(--border-default); padding: 7px 16px;
+    font-size: 10px; color: var(--text-tertiary); display: flex;
+    justify-content: space-between; align-items: center;
+    background: var(--surface-raised);
+  }
+  .footer-brand { font-weight: 700; color: var(--w-blue-500); font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-gradient"></div>
+  <div class="hdr-inner">
+    <span class="logo-w">W</span>
+    <div class="logo">Wordly Capture</div>
+    <div class="hdr-status">
+      <span class="hdr-live-text" id="hdr-live-text"></span>
+      <div class="status-dot idle" id="status-dot"></div>
+    </div>
+  </div>
+</div>
+
+<div class="body">
+
+  <div class="status-bar" id="status-bar"></div>
+
+  <!-- ── Config section ── -->
+  <div class="config-section" id="config-section">
+    <div class="form-2col">
+      <div>
+        <label>Session ID</label>
+        <input type="text" id="session-id" placeholder="ABCD-1234" maxlength="9">
+      </div>
+      <div>
+        <label>Passcode</label>
+        <input type="password" id="passcode" placeholder="Required" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-2col">
+      <div>
+        <label>Speaker Language</label>
+        <select id="language"><option value="">Loading...</option></select>
+      </div>
+      <div>
+        <label>Speaker Name</label>
+        <input type="text" id="speaker-name" placeholder="Tab Capture">
+      </div>
+    </div>
+    <div class="als-config-row">
+      <div class="als-config-label">
+        Auto Language Selection
+        <span>Wordly detects language switches automatically</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="als-toggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <button class="btn-start" id="btn-start">▶ &nbsp;Start Capture</button>
+  </div>
+
+  <!-- ── Live section ── -->
+  <div class="live-section" id="live-section">
+
+    <div class="session-info" id="session-info"></div>
+
+    <!-- Attend | Split row -->
+    <div class="attend-split-row">
+      <div class="attend-bar" id="attend-bar">
+        <span class="attend-icon">🎧</span>
+        <div class="attend-content">
+          <div class="attend-label">Click to attend</div>
+          <div class="attend-url" id="attend-url"></div>
+        </div>
+      </div>
+      <button class="btn-split" id="btn-split">✂ &nbsp;Split Transcript</button>
+    </div>
+
+    <!-- Language Being Captured | ALS | Mute -->
+    <div class="ctrl-row">
+      <div>
+        <label>Language Being Captured</label>
+        <select id="spoken-lang-select"><option value="">Loading...</option></select>
+      </div>
+      <div class="als-inline">
+        <span class="ctrl-label">ALS</span>
+        <label class="toggle" style="margin-bottom:0;">
+          <input type="checkbox" id="als-toggle-live" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="als-inline">
+        <span class="ctrl-label">Capture</span>
+        <button class="btn-mute-capture" id="btn-mute">🔇</button>
+      </div>
+    </div>
+
+    <!-- Quick Switch preset buttons -->
+    <div class="lang-section-hd">
+      <span class="lang-section-label">Quick Switch</span>
+      <span class="lang-current" id="lang-current"></span>
+    </div>
+    <div class="lang-grid" id="lang-grid"></div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- Local Browser Volume -->
+    <div class="vol-row">
+      <label>Local Browser Volume <span style="font-weight:400;color:var(--text-tertiary);text-transform:none;letter-spacing:0;"> — does not affect Wordly stream</span></label>
+      <div class="vol-slider-wrap">
+        <input type="range" id="vol-slider" min="0" max="100" value="100" step="1">
+        <span class="vol-pct" id="vol-pct">100%</span>
+      </div>
+    </div>
+
+    <!-- Leave | End -->
+    <div class="bottom-row">
+      <button class="btn-leave" id="btn-stop">■ &nbsp;Leave</button>
+      <button class="btn-end" id="btn-end">⏹ &nbsp;End Session</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <span class="footer-brand">wordly</span>
+  <span>Capture v0.2.1</span>
+</div>
+
+<!-- Split transcript confirm -->
+<div class="confirm-overlay" id="split-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Split Transcript?</div>
+    <div class="confirm-msg">This marks a new section in the Wordly transcript. Use this between agenda items or speakers.</div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" id="btn-split-cancel">Cancel</button>
+      <button class="btn-confirm-split" id="btn-split-confirm">Split Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- End session confirm -->
+<div class="end-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" style="color:#DC2626;">End Session?</div>
+    <div class="confirm-msg">Ends the Wordly session for all attendees everywhere. Cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" id="btn-cancel">Cancel</button>
+      <button class="btn-confirm-end" id="btn-confirm-end">End Now</button>
+    </div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
