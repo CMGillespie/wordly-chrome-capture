@@ -227,6 +227,8 @@ async function handleStart(msg) {
               // Extract session language list — field is languageCodes (confirmed)
               const sessionLangs = m.languageCodes || m.languages || m.languageList || m.supportedLanguages || m.allowedLanguages || null;
               setState({ sessionLanguages: sessionLangs, connectResponse: m });
+              // Persist session languages so popup can restore them after reopening
+              if (sessionLangs) chrome.storage.local.set({ lastSessionLanguages: sessionLangs });
               resolve();
             } else {
               reject(new Error(`Wordly error ${m.code}: ${m.message || "Connection refused"}`));
@@ -373,6 +375,7 @@ function handleStop() {
   setState({ status: "idle", sessionId: null, passcode: null,
              language: null, speakerName: null, sessionLanguages: null,
              connectResponse: null, error: null });
+  chrome.storage.local.remove("lastSessionLanguages");
 }
 
 async function handleEndSession() {
@@ -387,6 +390,7 @@ async function handleEndSession() {
   setState({ status: "idle", sessionId: null, passcode: null,
              language: null, speakerName: null, sessionLanguages: null,
              connectResponse: null, error: null });
+  chrome.storage.local.remove("lastSessionLanguages");
 }
 
 function cleanup() {

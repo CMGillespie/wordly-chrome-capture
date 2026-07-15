@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Restore saved values
   const saved = await chrome.storage.local.get([
-    "lastSessionId", "lastLanguage", "lastSpeakerName", "lastAls", "lastVolume"
+    "lastSessionId", "lastLanguage", "lastSpeakerName", "lastAls", "lastVolume", "lastSessionLanguages"
   ]);
   if (saved.lastSessionId)   document.getElementById("session-id").value   = saved.lastSessionId;
   // Note: passcode is intentionally NOT restored — credentials are never persisted
@@ -59,12 +59,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Wire buttons
   document.getElementById("btn-start").addEventListener("click", startCapture);
   document.getElementById("btn-stop").addEventListener("click", stopCapture);
-  document.getElementById("btn-mute").addEventListener("click", toggleMute);
+  document.getElementById("hdr-btn-mute").addEventListener("click", toggleMute);
   document.getElementById("btn-end").addEventListener("click", confirmEndSession);
   document.getElementById("btn-cancel").addEventListener("click", closeConfirm);
   document.getElementById("btn-confirm-end").addEventListener("click", doEndSession);
   document.getElementById("attend-bar").addEventListener("click", openAttend);
-  document.getElementById("btn-split").addEventListener("click", confirmSplit);
+  document.getElementById("hdr-btn-split").addEventListener("click", confirmSplit);
   document.getElementById("btn-split-cancel").addEventListener("click", closeSplitConfirm);
   document.getElementById("btn-split-confirm").addEventListener("click", doSplit);
 
@@ -93,6 +93,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Get current state
   try {
     const state = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    if (!state.sessionLanguages && saved.lastSessionLanguages) {
+      state.sessionLanguages = saved.lastSessionLanguages;
+    }
     applyState(state);
   } catch(e) {
     applyState({ status: "idle" });
@@ -207,25 +210,17 @@ function applyState(state) {
   currentState = state;
 
   const dot       = document.getElementById("status-dot");
-  const hdrText   = document.getElementById("hdr-live-text");
   const statusBar = document.getElementById("status-bar");
   const configSec = document.getElementById("config-section");
   const liveSec   = document.getElementById("live-section");
   const sessInfo  = document.getElementById("session-info");
-  const btnMute   = document.getElementById("btn-mute");
   const btnStart  = document.getElementById("btn-start");
   const alsLive   = document.getElementById("als-toggle-live");
   const langCur   = document.getElementById("lang-current");
   const spokenSel = document.getElementById("spoken-lang-select");
-  const attendBar = document.getElementById("attend-bar");
   const attendUrl = document.getElementById("attend-url");
 
   dot.className = `status-dot ${state.status}`;
-
-  const hdrMsgs = { idle:"", connecting:"Connecting...", connected:"● Live", muted:"⏸ Muted", stopping:"Stopping...", error:"Error" };
-  hdrText.textContent = hdrMsgs[state.status] || "";
-  hdrText.className   = `hdr-live-text ${state.status}`;
-  if (state.status && state.status !== "idle") hdrText.classList.add("show");
 
   if (state.status === "error" && state.error) {
     statusBar.textContent = state.error;
@@ -255,11 +250,19 @@ function applyState(state) {
   }
 
   isMuted = state.status === "muted";
-  if (btnMute) {
-    btnMute.textContent = isMuted ? "🔊" : "🔇";
-    btnMute.classList.toggle("on", isMuted);
-    btnMute.title = isMuted ? "Unmute Capture" : "Mute Capture";
-  }
+  const iconPause = document.getElementById("icon-pause");
+  const iconPlay  = document.getElementById("icon-play");
+  const muteTip   = document.getElementById("mute-tip");
+  if (iconPause) iconPause.style.display = isMuted ? "none" : "block";
+  if (iconPlay)  iconPlay.style.display  = isMuted ? "block" : "none";
+  if (muteTip)   muteTip.textContent     = isMuted ? "Resume capture" : "Pause capture";
+
+  // Show/hide header action buttons in live view
+  const hdrBtnMute  = document.getElementById("hdr-btn-mute");
+  const hdrBtnSplit = document.getElementById("hdr-btn-split");
+  const isLiveNow   = ["connected", "muted"].includes(state.status);
+  if (hdrBtnMute)  hdrBtnMute.style.display  = isLiveNow ? "flex" : "none";
+  if (hdrBtnSplit) hdrBtnSplit.style.display = isLiveNow ? "flex" : "none";
 
   if (alsLive && state.alsEnabled !== undefined) alsLive.checked = state.alsEnabled;
 
@@ -381,9 +384,8 @@ async function doEndSession() {
 }
 
 function showError(msg) {
-  document.getElementById("status-bar").textContent = msg;
-  document.getElementById("status-bar").className   = "status-bar show error";
-  document.getElementById("status-dot").className   = "status-dot error";
-  document.getElementById("hdr-live-text").textContent = "Error";
-  document.getElementById("hdr-live-text").className   = "hdr-live-text show error";
+  const bar = document.getElementById("status-bar");
+  const dot = document.getElementById("status-dot");
+  if (bar) { bar.textContent = msg; bar.className = "status-bar show error"; }
+  if (dot) dot.className = "status-dot error";
 }
