@@ -1,4 +1,8 @@
-// popup.js — Wordly Capture v0.3i
+// popup.js — Wordly Capture v0.3j
+// v0.3j: removed ALS toggle from the start screen (ALS now follows the session's
+//        configured value from the connect message); volume slider blue fill;
+//        ALS message restyled informational + ⓘ legend; LANG removed from the
+//        active-panel banner; button ⓘ recolored to match the legend.
 // v0.3i: removed the ALS ★ markers everywhere; instead flag NON-ALS languages
 //        with an ⓘ info marker (buttons + dropdown). ALS warning reworded to
 //        Graham's copy on both the pre-start and live views.
@@ -115,13 +119,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btn-split-cancel").addEventListener("click", closeSplitConfirm);
   document.getElementById("btn-split-confirm").addEventListener("click", doSplit);
 
-  // ALS toggles — change events only fire from user interaction (toggle is
-  // disabled while ALS-locked), so these always reflect a real user preference
-  document.getElementById("als-toggle").addEventListener("change", function() {
-    chrome.storage.local.set({ lastAls: this.checked });
-  });
+  // ALS toggle lives only on the live view now (removed from the start screen).
+  // Its change event only fires from user interaction (disabled while ALS-locked).
   document.getElementById("als-toggle-live").addEventListener("change", function() {
-    chrome.storage.local.set({ lastAls: this.checked });
     chrome.runtime.sendMessage({ type: "SET_ALS", enabled: this.checked });
   });
 
@@ -156,6 +156,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function updateVolUI(vol) {
   document.getElementById("vol-pct").textContent  = `${vol}%`;
+  // Drive the blue fill left of the slider handle
+  const slider = document.getElementById("vol-slider");
+  if (slider) slider.style.setProperty("--vol-fill", `${vol}%`);
   const icon = document.getElementById("vol-icon");
   if (!icon) return;
   if (vol === 0)       icon.textContent = "🔇";
@@ -389,11 +392,10 @@ function isAlsCapable(code) {
 // Never persisted; recomputed on every list/selection change. Unlocking only
 // re-enables the toggle — it never silently turns ALS back on.
 function refreshAlsAvailability() {
-  const t1      = document.getElementById("als-toggle");
+  // Config-screen ALS toggle was removed in v0.3j — only the live toggle remains.
   const t2      = document.getElementById("als-toggle-live");
   const msgCfg  = document.getElementById("als-config-msg");
   const msgLive = document.getElementById("als-disabled-msg");
-  if (!t1 || !t2) return;
 
   const isLive = currentState && ["connected", "muted"].includes(currentState.status);
 
@@ -407,26 +409,24 @@ function refreshAlsAvailability() {
     const l = languages.find(x => x.wordlyCode === c);
     return l ? l.englishName : c.toUpperCase();
   });
+  const msg = `Language will not change automatically because the following languages do not support it: ${names.join(", ")}`;
 
   if (offenders.length) {
     if (!alsLocked) {
       alsLocked = true;
       // Kill ALS on the live stream if it was running
-      if (isLive && currentState.alsEnabled) {
+      if (isLive && currentState && currentState.alsEnabled) {
         chrome.runtime.sendMessage({ type: "SET_ALS", enabled: false }).catch(() => {});
       }
     }
-    t1.checked = false; t1.disabled = true;
-    t2.checked = false; t2.disabled = true;
-    const list = names.join(", ");
-    const msg = `Language will not change automatically because the following languages do not support it: ${list}`;
-    if (msgCfg)  { msgCfg.textContent  = msg; msgCfg.style.display  = "block"; }
-    if (msgLive) { msgLive.textContent = msg; msgLive.style.display = "block"; }
+    if (t2) { t2.checked = false; t2.disabled = true; }
+    if (msgCfg)  { msgCfg.textContent  = msg; msgCfg.style.display  = "flex"; }
+    if (msgLive) { msgLive.textContent = msg; msgLive.style.display = "flex"; }
   } else {
-    // Unlock only — re-enable the toggle but leave ALS OFF.
+    // Unlock only — re-enable the toggle but leave its value to the session/user.
     if (alsLocked) {
       alsLocked = false;
-      t1.disabled = false; t2.disabled = false;
+      if (t2) t2.disabled = false;
     }
     if (msgCfg)  msgCfg.style.display  = "none";
     if (msgLive) msgLive.style.display = "none";
@@ -486,10 +486,8 @@ function applyState(state) {
   if (btnStart) { btnStart.disabled = false; btnStart.textContent = "▶ \u00a0Start Capture"; }
 
   if (isLive && state.sessionId) {
-    // Banner shows the language CODE only (e.g. EN, ZH, ES-MX) so its width stays
-    // stable as you flip languages — full names caused the banner to jitter.
-    const langCode = (state.language || "").toUpperCase();
-    sessInfo.innerHTML = `<b>SESSION</b> ${state.sessionId} &nbsp;·&nbsp; <b>LANG</b> ${langCode} &nbsp;·&nbsp; <b>NAME</b> ${state.speakerName || "—"}`;
+    // Banner shows Session and Name only — LANG removed per Graham.
+    sessInfo.innerHTML = `<b>SESSION</b> ${state.sessionId} &nbsp;·&nbsp; <b>NAME</b> ${state.speakerName || "—"}`;
     sessInfo.classList.add("show");
 
     // Attend bar
@@ -540,7 +538,8 @@ async function startCapture() {
   const passcode    = document.getElementById("passcode").value.trim();
   const language    = document.getElementById("language").value;
   const speakerName = document.getElementById("speaker-name").value.trim() || "Tab Capture";
-  const alsEnabled  = document.getElementById("als-toggle").checked;
+  // ALS is no longer chosen here — it follows the session's own configured value,
+  // read from the connect response in the background worker.
 
   if (!sessionId || sessionId.length < 9) { showError("Enter a valid Session ID (ABCD-1234)"); return; }
 
@@ -556,7 +555,7 @@ async function startCapture() {
     return;
   }
 
-  await chrome.storage.local.set({ lastSessionId: sessionId, lastLanguage: language, lastSpeakerName: speakerName, lastAls: alsEnabled });
+  await chrome.storage.local.set({ lastSessionId: sessionId, lastLanguage: language, lastSpeakerName: speakerName });
   // Note: passcode intentionally excluded — credentials are never persisted
 
   // Fresh session — clear all Quick Switch state (and any stale session language
@@ -574,7 +573,7 @@ async function startCapture() {
   const vol = volSaved.lastVolume !== undefined ? volSaved.lastVolume : 100;
 
   try {
-    const result = await chrome.runtime.sendMessage({ type: "START", streamId, sessionId, passcode, language, speakerName, alsEnabled });
+    const result = await chrome.runtime.sendMessage({ type: "START", streamId, sessionId, passcode, language, speakerName });
     if (result && !result.ok) {
       btn.disabled = false; btn.textContent = "▶ \u00a0Start Capture";
       showError(result.error || "Failed to start.");

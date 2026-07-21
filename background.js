@@ -1,4 +1,6 @@
-// background.js — Wordly Capture v0.3g
+// background.js — Wordly Capture v0.3j
+// v0.3j: ALS now follows the session's configured value (dynamicLanguageSelection
+//        from the connect response) instead of a popup toggle choice
 // v0.3g: clear manualAdds + removedBaseCodes on stop/end
 // Service worker: WSS connection, audio routing, language list caching
 // connectionCode: 9011
@@ -194,9 +196,11 @@ async function handleStart(msg) {
     return { ok: false, error: `Already ${state.status}` };
   }
 
-  const { streamId, sessionId, passcode, language, speakerName, alsEnabled } = msg;
+  const { streamId, sessionId, passcode, language, speakerName } = msg;
+  // ALS is no longer chosen in the popup — it follows the session's configured
+  // value, read from the connect response below. Default true until we know.
   setState({ status: "connecting", sessionId, passcode, language, speakerName,
-             alsEnabled: alsEnabled !== false, error: null });
+             alsEnabled: true, error: null });
 
   try {
     ws = new WebSocket(PRESENT_URL);
@@ -227,7 +231,10 @@ async function handleStart(msg) {
             if (m.success) {
               // Extract session language list — field is languageCodes (confirmed)
               const sessionLangs = m.languageCodes || m.languages || m.languageList || m.supportedLanguages || m.allowedLanguages || null;
-              setState({ sessionLanguages: sessionLangs, connectResponse: m });
+              // ALS follows the session's own configured value (dynamicLanguageSelection)
+              const sessionAls = (m.dynamicLanguageSelection && typeof m.dynamicLanguageSelection.enabled === "boolean")
+                ? m.dynamicLanguageSelection.enabled : true;
+              setState({ sessionLanguages: sessionLangs, connectResponse: m, alsEnabled: sessionAls });
               // Persist session languages so popup can restore them after reopening
               if (sessionLangs) chrome.storage.local.set({ lastSessionLanguages: sessionLangs });
               resolve();
@@ -239,12 +246,12 @@ async function handleStart(msg) {
       };
     });
 
-    // Send start with ALS setting
+    // Send start with the session's ALS setting (captured from connect above)
     ws.send(JSON.stringify({
       type:       "start",
       languageCode: language,
       sampleRate: SAMPLE_RATE,
-      dynamicLanguageSelection: { enabled: alsEnabled !== false },
+      dynamicLanguageSelection: { enabled: state.alsEnabled },
     }));
 
     ws.onmessage = handleWSSMessage;

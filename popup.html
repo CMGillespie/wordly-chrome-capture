@@ -54,8 +54,8 @@
   .logo-w {
     width: 22px; height: 22px; flex-shrink: 0;
   }
-  .logo { font-size: 14px; font-weight: 700; color: var(--text-1); flex:1; }
-  .hdr-right { display:flex; align-items:center; gap:6px; }
+  .logo { font-size: 14px; font-weight: 700; color: var(--text-1); flex:1; min-width:0; }
+  .hdr-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
 
   /* header action buttons (split + mute) — icon only, shown in live view */
   .hdr-btn {
@@ -64,6 +64,7 @@
     padding: 4px 8px; border-radius: 4px; color: var(--text-2);
     align-items: center; justify-content: center; gap: 5px;
     height: 28px; position: relative;
+    white-space: nowrap; flex-shrink: 0;
   }
   .hdr-btn:hover { background: var(--surface-in); color: var(--text-1); }
   .hdr-btn svg { width:16px; height:16px; stroke: currentColor; }
@@ -134,11 +135,16 @@
     display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
   }
   .als-live-label { font-size: 12px; font-weight: 500; color: var(--text-1); flex:1; }
-  /* ALS warning — shown when the selected language does not support ALS */
+  /* ALS info message — informational (not warning) style per Graham; the ⓘ on
+     the left is a legend for the ⓘ marker on non-ALS language buttons */
   .als-warn {
-    font-size: 11px; color: #B45309; background: #FFFBEB;
-    border: 1px solid #FDE68A; border-radius: var(--r);
+    font-size: 11px; color: #1E40AF; background: #EBF5FF;
+    border: 1px solid #D1E7FF; border-radius: var(--r);
     padding: 6px 10px; line-height: 1.5;
+    display: flex; gap: 6px; align-items: flex-start;
+  }
+  .als-warn::before {
+    content: "ⓘ"; font-weight: 700; flex-shrink: 0; line-height: 1.5;
   }
 
   /* Toggle */
@@ -215,9 +221,9 @@
   .btn-lang.on:hover { background: var(--blue-hover); }
   /* English names can be long; clip to the button width, full name shows on hover */
   .lang-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* Inline info marker on NON-ALS languages — muted, sits before the name
-     (turns white on the active/blue button so it stays visible) */
-  .lang-info { color: var(--text-3); font-weight: 700; }
+  /* Inline info marker on NON-ALS languages — Graham info blue, matches the
+     legend in the ALS message box (turns white on the active/blue button) */
+  .lang-info { color: #1E40AF; font-weight: 700; }
   .btn-lang.on .lang-info { color: #fff; }
 
   /* Remove-X on Quick Switch buttons — revealed on hover */
@@ -248,14 +254,19 @@
   /* Volume */
   .vol-row { margin-bottom: 10px; }
   .vol-slider-wrap { display:flex; align-items:center; gap:8px; }
+  /* Blue fill to the LEFT of the handle (#017CFF per Graham). --vol-fill is the
+     current value %, set live from JS in updateVolUI. */
   input[type="range"] {
-    flex:1; height:4px; background: var(--border);
+    flex:1; height:4px;
+    background: linear-gradient(to right,
+      #017CFF 0%, #017CFF var(--vol-fill,100%),
+      var(--border) var(--vol-fill,100%), var(--border) 100%);
     border-radius:2px; outline:none; border:none; padding:0; cursor:pointer;
     -webkit-appearance:none; appearance:none;
   }
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
-    background: var(--blue); cursor:pointer;
+    background: #017CFF; cursor:pointer;
     box-shadow: 0 1px 3px rgba(0,0,0,.2);
     transition: background .12s;
   }
@@ -379,14 +390,10 @@
         <input type="text" id="speaker-name" placeholder="Tab Capture">
       </div>
     </div>
-    <div class="als-row">
-      <div class="als-label">Automatically switch speaker language</div>
-      <label class="toggle">
-        <input type="checkbox" id="als-toggle" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="als-warn" id="als-config-msg" style="display:none;margin:-4px 0 12px;"></div>
+    <!-- ALS toggle removed from the start screen (v0.3j): ALS now follows the
+         session's own configured value. This info box still shows if the chosen
+         Speaker Language can't do ALS. -->
+    <div class="als-warn" id="als-config-msg" style="display:none;margin:2px 0 12px;"></div>
     <button class="btn-start" id="btn-start">▶ &nbsp;Start Capture</button>
   </div>
 
@@ -448,7 +455,7 @@
     <span>|</span>
     <span>© 2026 Wordly</span>
     <span>|</span>
-    <span id="footer-version">v0.3i</span>
+    <span id="footer-version">v0.3j</span>
   </div>
 </div>
 
