@@ -215,9 +215,10 @@
   .btn-lang.on:hover { background: var(--blue-hover); }
   /* English names can be long; clip to the button width, full name shows on hover */
   .lang-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* Inline ALS star — sits just before the name, Wordly blue (white on active) */
-  .lang-star { color: var(--blue); font-weight: 700; }
-  .btn-lang.on .lang-star { color: #fff; }
+  /* Inline info marker on NON-ALS languages — muted, sits before the name
+     (turns white on the active/blue button so it stays visible) */
+  .lang-info { color: var(--text-3); font-weight: 700; }
+  .btn-lang.on .lang-info { color: #fff; }
 
   /* Remove-X on Quick Switch buttons — revealed on hover */
   .lang-x {
@@ -447,7 +448,7 @@
     <span>|</span>
     <span>© 2026 Wordly</span>
     <span>|</span>
-    <span id="footer-version">v0.3h</span>
+    <span id="footer-version">v0.3i</span>
   </div>
 </div>
 

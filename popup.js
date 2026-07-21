@@ -1,4 +1,7 @@
-// popup.js — Wordly Capture v0.3h
+// popup.js — Wordly Capture v0.3i
+// v0.3i: removed the ALS ★ markers everywhere; instead flag NON-ALS languages
+//        with an ⓘ info marker (buttons + dropdown). ALS warning reworded to
+//        Graham's copy on both the pre-start and live views.
 // v0.3h: ALS defaults ON for a fresh session instead of inheriting a remembered
 //        "off"; list-based lock still forces it off when a language can't do ALS
 // v0.3g: FIX — session languages now REPLACE the config.json preset placeholder
@@ -18,7 +21,7 @@
 
 const PRESET_CODES     = ["en", "es-MX", "fr", "fr-CA", "de", "ja"];
 const ATTEND_BASE      = "https://attend.wordly.ai/join/";
-const ALS_STAR         = "★";
+const ALS_INFO         = "ⓘ";  // marker shown on languages that DON'T support ALS
 const QUICK_SWITCH_MAX = 10;   // hard ceiling on total Quick Switch buttons
 
 let currentState = null;
@@ -189,18 +192,16 @@ async function loadLanguages(selectedCode) {
   buildPresetButtons(code);
 }
 
-// Populate a language <select>. ALS-capable languages get a ★ marker AFTER the
-// name so the user can see which support auto language switching.
-// NOTE: on macOS, Chrome renders the native OS dropdown, which ignores per-option
-// CSS color — so the ★ shows in the menu's default text color, not Wordly blue.
-// True-blue-after-name would require replacing this with a custom dropdown.
+// Populate a language <select>. Languages that DON'T support ALS get an ⓘ marker
+// after the name; ALS-capable languages get nothing. (Native <option> is text-only
+// and macOS ignores per-option CSS, so the ⓘ shows in the menu's default color.)
 function fillLangDropdown(sel, code) {
   if (!sel) return;
   sel.innerHTML = "";
   for (const l of languages) {
     const opt = document.createElement("option");
     opt.value = l.wordlyCode;
-    opt.textContent = langLabel(l) + (isAlsCapable(l.wordlyCode) ? `  ${ALS_STAR}` : "");
+    opt.textContent = langLabel(l) + (isAlsCapable(l.wordlyCode) ? "" : `  ${ALS_INFO}`);
     if (l.wordlyCode === code) opt.selected = true;
     sel.appendChild(opt);
   }
@@ -295,17 +296,17 @@ function buildPresetButtons(activeLang, sessionLanguages) {
     btn.dataset.code = code;
     btn.title        = langLabel(l);
 
-    // Button labels are English only (matches the native Wordly app). The ALS
-    // star sits inline just before the name; long names truncate with an
-    // ellipsis in the fixed grid and show the full name on hover.
+    // Button labels are English only (matches the native Wordly app). Languages
+    // that DON'T support ALS get an inline ⓘ marker before the name; long names
+    // truncate with an ellipsis in the fixed grid and show the full name on hover.
     const label = document.createElement("span");
     label.className = "lang-label";
-    if (isAlsCapable(code)) {
-      const star = document.createElement("span");
-      star.className   = "lang-star";
-      star.textContent = ALS_STAR + " ";
-      star.title       = "Supports auto language switching";
-      label.appendChild(star);
+    if (!isAlsCapable(code)) {
+      const info = document.createElement("span");
+      info.className   = "lang-info";
+      info.textContent = ALS_INFO + " ";
+      info.title       = "Does not support automatic language switching";
+      label.appendChild(info);
     }
     label.appendChild(document.createTextNode(l.englishName || code.toUpperCase()));
     btn.appendChild(label);
@@ -418,10 +419,9 @@ function refreshAlsAvailability() {
     t1.checked = false; t1.disabled = true;
     t2.checked = false; t2.disabled = true;
     const list = names.join(", ");
-    const msgCfgText  = `${list} ${offenders.length > 1 ? "do" : "does"} not support automatic language switching. ALS is off.`;
-    const msgLiveText = `${list} ${offenders.length > 1 ? "do" : "does"} not support automatic language switching. Remove ${offenders.length > 1 ? "them" : "it"} from Quick Switch to turn ALS back on.`;
-    if (msgCfg)  { msgCfg.textContent  = msgCfgText;  msgCfg.style.display  = "block"; }
-    if (msgLive) { msgLive.textContent = msgLiveText; msgLive.style.display = "block"; }
+    const msg = `Language will not change automatically because the following languages do not support it: ${list}`;
+    if (msgCfg)  { msgCfg.textContent  = msg; msgCfg.style.display  = "block"; }
+    if (msgLive) { msgLive.textContent = msg; msgLive.style.display = "block"; }
   } else {
     // Unlock only — re-enable the toggle but leave ALS OFF.
     if (alsLocked) {
